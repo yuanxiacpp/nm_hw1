@@ -61,60 +61,118 @@ double dotProductForCols(double *a, int n, int col1, int col2) {
     result += a[n*i+col1]*a[n*i+col2];
   return result;
 }
-void updateFromPrevCols(double *u, int n, int col) {
+void updateFromPrevCols(double *u, double *g, int n, int col) {
   int i, j;
-  double* tmp = (double *)malloc(n*sizeof(double));
+  double* tmp_u = (double *)malloc(n*sizeof(double));
   for (i = 0; i < n; i++)
-    tmp[i] = 0.0;
+    tmp_u[i] = 0.0;
+
+  
+  double* tmp_g = (double *)malloc(n*sizeof(double));
+  memcpy(tmp_g, tmp_u, n*sizeof(double));
   
   //sum of all prev dot products
   for (i = 0; i < col; i++) {
-    double dot = dotProductForCols(u, n, col, i);
-    for (j = 0; j < n; j++) 
-      tmp[j] += dot * u[j*n+i];
+    double dotu = dotProductForCols(u, n, col, i);
+
+    
+    double dotg = 0.0;
+    int k;
+    for (k = 0; i < n; k++)
+      dotg += u[n*k+i] * g[n*k+col];
+    
+
+
+    for (j = 0; j < n; j++) {
+      tmp_u[j] += dotu * u[j*n+i];
+      tmp_g[j] += dotg * g[j*n+i];
+    }
   }
 
   //update current col
-  for (i = 0; i < n; i++)
-    u[i*n+col] -= tmp[i];
+  for (i = 0; i < n; i++) {
+    u[i*n+col] -= tmp_u[i];
+    g[i*n+col] -= tmp_g[i];
+  }
+  
   
   return;
 }
 
 
-void updateFollowingCols(double *u, int n, int col) {
+void updateFollowingCols(double *u, double *g, int n, int col) {
   int i, j;
   for (j = col; j < n; j++) {
-    double dot = dotProductForCols(u, n, j, col-1);
+    double dotu = dotProductForCols(u, n, j, col-1);
+    
+    double dotg = 0.0;
+    int k;
+    for (k = 0; k < n; k++)
+      dotg += u[n*k+j] * g[n*k+col-1];
+    
+    
     //update j-th col with (col-1)-th unit vector
-    for (i = 0; i < n; i++)
-      u[i*n+j] -= dot * u[i*n+col-1];
+    for (i = 0; i < n; i++) {
+      u[i*n+j] -= dotu * u[i*n+col-1];
+      g[i*n+j] -= dotg * g[i*n+col-1];
+    }
   }
 
+  return;
+}
+
+
+void assignIdentity(double *a, int n) {
+  int r, c;
+  for (r = 0; r < n; ++r) {
+    for (c = 0; c < n; ++c) {
+      if (r == c)
+	a[r*n+c] = 1;
+      else
+	a[r*n+c] = 0;
+    }
+  }
   return;
 }
 
 void inv_double_gs(double *a, int n, double *u, double *b) {
   
   int i, j;
+  
+  double* g = (double *)malloc(n*n*sizeof(double));
+  assignIdentity(g, n);
+
   for (i = 0; i < n; i++) {
-    updateFromPrevCols(u, n, i);
+    updateFromPrevCols(u, g, n, i);
     normalizeCol(u, n, i);
-    updateFollowingCols(u, n, i+1);
+    normalizeCol(g, n, i);
+    updateFollowingCols(u, g, n, i+1);
+    
   }
 
+  printf("A: \n");
+  printMatrix(a, n);
 
-  //printMatrix(a, n);
-  //printMatrix(u, n);
+  printf("U: \n");
+  printMatrix(u, n);
 
   double* ut = (double*)malloc(n*n*sizeof(double));
   memcpy(ut, u, n*n*sizeof(double));
 
-  //transpose(ut, n);
-  
-  printMatrix(multiply(u, ut, n, n, n), n);
-    
+  transpose(ut, n);
 
+  printf("Verify U: \n");
+  printMatrix(multiply(u, ut, n, n, n), n);
+
+
+
+  memcpy(b, multiply(g, ut, n, n, n), n*n*sizeof(double));
+  
+  printf("A Inverse: \n");
+  printMatrix(b, n);  
+  
+  printf("Verify Result: \n");
+  printMatrix(multiply(a, b, n, n, n), n);
   
   return;
 }
@@ -139,6 +197,6 @@ void problem1(int n) {
 }
 
 int main() {
-  problem1(10);
+  problem1(3);
   return 0;
 }
