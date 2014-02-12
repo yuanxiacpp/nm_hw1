@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 
 void printMatrix(double *a, int n) {
   printf("***************** Matrix %d x %d *********************\n", n, n);
@@ -40,7 +41,7 @@ double* multiply(double *a, double *b, int p, int q, int r) {
   return result;
 }
 
-void normalizeCol(double *a, int n, int col) {
+void normalizeCol(double *a, double *g, int n, int col) {
   double sum = 0;
   int i;
   for (i = 0; i < n; i++) {
@@ -50,8 +51,10 @@ void normalizeCol(double *a, int n, int col) {
 
   if (sum == 0)
     return;
-  for (i = 0; i < n; i++)
+  for (i = 0; i < n; i++) {
     a[n*i+col] /= sum;
+    g[n*i+col] /= sum;
+  }
   return;
 }
 double dotProductForCols(double *a, int n, int col1, int col2) {
@@ -74,18 +77,19 @@ void updateFromPrevCols(double *u, double *g, int n, int col) {
   //sum of all prev dot products
   for (i = 0; i < col; i++) {
     double dotu = dotProductForCols(u, n, col, i);
-
+    //double dotg = dotProductForCols(g, n, col, i);
     
+    /*
     double dotg = 0.0;
     int k;
-    for (k = 0; i < n; k++)
+    for (k = 0; k < n; k++)
       dotg += u[n*k+i] * g[n*k+col];
-    
-
+    */
+      
 
     for (j = 0; j < n; j++) {
       tmp_u[j] += dotu * u[j*n+i];
-      tmp_g[j] += dotg * g[j*n+i];
+      tmp_g[j] += dotu * g[j*n+i];
     }
   }
 
@@ -105,16 +109,20 @@ void updateFollowingCols(double *u, double *g, int n, int col) {
   for (j = col; j < n; j++) {
     double dotu = dotProductForCols(u, n, j, col-1);
     
+
+    //double dotg = dotProductForCols(g, n, j, col-1);
+    
+    /*
     double dotg = 0.0;
     int k;
     for (k = 0; k < n; k++)
       dotg += u[n*k+j] * g[n*k+col-1];
-    
+    */
     
     //update j-th col with (col-1)-th unit vector
     for (i = 0; i < n; i++) {
       u[i*n+j] -= dotu * u[i*n+col-1];
-      g[i*n+j] -= dotg * g[i*n+col-1];
+      g[i*n+j] -= dotu * g[i*n+col-1];
     }
   }
 
@@ -144,10 +152,8 @@ void inv_double_gs(double *a, int n, double *u, double *b) {
 
   for (i = 0; i < n; i++) {
     updateFromPrevCols(u, g, n, i);
-    normalizeCol(u, n, i);
-    normalizeCol(g, n, i);
+    normalizeCol(u, g, n, i);
     updateFollowingCols(u, g, n, i+1);
-    
   }
 
   printf("A: \n");
@@ -164,7 +170,8 @@ void inv_double_gs(double *a, int n, double *u, double *b) {
   printf("Verify U: \n");
   printMatrix(multiply(u, ut, n, n, n), n);
 
-
+  printf("G: \n");
+  printMatrix(g, n);
 
   memcpy(b, multiply(g, ut, n, n, n), n*n*sizeof(double));
   
@@ -177,6 +184,8 @@ void inv_double_gs(double *a, int n, double *u, double *b) {
   return;
 }
 void problem1(int n) {
+  srand(time(NULL));
+  
   int i, j;
 
   double *a = (double *)malloc(n*n*sizeof(double));
@@ -185,7 +194,7 @@ void problem1(int n) {
 
   for (i = 0; i < n; i++)
     for (j = 0; j < n; j++)
-      a[i*n+j] = (double)rand()/(double)RAND_MAX;
+      a[i*n+j] = (double)rand()/(double)RAND_MAX * 10;
       //a[i*n+j] = rand() % 10;
 
   //printMatrix(a, n);
@@ -197,6 +206,6 @@ void problem1(int n) {
 }
 
 int main() {
-  problem1(3);
+  problem1(5);
   return 0;
 }
