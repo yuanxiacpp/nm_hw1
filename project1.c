@@ -150,12 +150,15 @@ void inv_double_gs(double *a, int n, double *u, double *b) {
   double* g = (double *)malloc(n*n*sizeof(double));
   assignIdentity(g, n);
 
+  //double GS
   for (i = 0; i < n; i++) {
     updateFromPrevCols(u, g, n, i);
     normalizeCol(u, g, n, i);
     updateFollowingCols(u, g, n, i+1);
   }
 
+
+  
   printf("A: \n");
   printMatrix(a, n);
 
@@ -175,7 +178,7 @@ void inv_double_gs(double *a, int n, double *u, double *b) {
 
   memcpy(b, multiply(g, ut, n, n, n), n*n*sizeof(double));
   
-  printf("A Inverse: \n");
+  printf("A Inverse - B: \n");
   printMatrix(b, n);  
   
   printf("Verify Result: \n");
